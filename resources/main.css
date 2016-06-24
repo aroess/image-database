@@ -1,0 +1,92 @@
+/* always show vertical scoll bar */
+
+html {
+    overflow-y:scroll;
+    overflow: -moz-scrollbars-vertical;
+    }
+body{
+    text-align: center; 
+    }
+.pictureDiv img{
+    border:0;
+    padding:0;
+    margin:0;
+    }
+input[type=text]{
+    color:#afafaf;
+    }
+p{
+    clear:both;
+    font-family:monospace;
+    font-size:10px;
+    text-align:center;
+    padding:10px;
+    }
+#header{
+    width:100%;
+    margin-bottom: 10px;
+    }
+#searchBar{
+    width:780px;
+    margin:0 auto;
+}
+#tagBar{
+    padding-top:5px;
+    padding-bottom:5px;
+    margin:0 auto;
+    text-align:center;
+    }
+#searchResults{
+    padding:0 100px;
+    margin:0 auto;
+    }
+#footer{
+    clear:both;
+    padding-top:20px;
+    margin:0 auto;
+    display:none;
+    text-align:center;
+    }
+.pictureDiv{
+    padding:0;
+    margin:2px;
+    width:100px;
+    height:100px;
+    display:inline-block;
+    }
+
+#imgHover {
+    z-index: 99; 
+    background: rgba(6, 6, 6, 0.89) none repeat scroll 0% 0%; 
+    position: fixed; 
+    left: 0px; 
+    top: 0px; 
+    width: 100%; 
+    height: 100%; 
+    display: none;
+    color: white;
+    text-align: left;
+}
+
+#imgHover #main {
+    position: absolute;
+    max-width: 70%;
+    max-height: 70%;
+    height: auto;
+    margin: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 10px solid white;
+}
+
+#imgHover .menu {
+   width: 45px;
+   height: 45px;
+}
+
+#imageEdit {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  margin-bottom: 20px;
+}
