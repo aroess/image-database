@@ -24,8 +24,8 @@
 <div style="width:450px; margin-left:20px;">
 <h1>Untagged Files</h1>
 <div class="list-group">
-%for filename in untaggedFiles:
-    <a class="list-group-item" href="/edit/{{filename}}">{{filename}}</a>
+%for filepath, fileID in untaggedFiles:
+    <a class="list-group-item" href="/edit/{{fileID}}">{{filepath}}</a>
 %end
 </div>
 </div>

@@ -42,7 +42,7 @@
 <!--- TAGBAR END ---->
 
 %if filename:
-    <img id="imageEdit" src="../static/img/{{filename}}" width={{width}} height={{height}} /><br>
+    <img name="imageEdit" id="{{fileID}} " src="../static/{{filename}}" width={{width}} height={{height}} /><br>
 
 <div id="tagbuttons">
 %for entry in assignedTags:

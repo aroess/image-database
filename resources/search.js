@@ -30,9 +30,9 @@ var showResults = function(data) {
         htmlOut += '<h6><span class="label label-default">Page {0}</span></h6>'.format(currPage+1);
         for(var i=0; i<data["result"].length; i++) {
             htmlOut +=
-            '<div class="pictureDiv"><a href="{1}">\
-            <img src="static/img/thumbs/{0}.jpg" width="100" height="100" />\
-            </a></div>'.format(splitext(data["result"][i])[0], data["result"][i]);
+            '<div class="pictureDiv"><a href="{0}" id="{2}">\
+            <img src="static/thumbs/{1}" width="100" height="100" />\
+</a></div>'.format(data["result"][i][0], data["result"][i][1], data["result"][i][2]);
         }
         $('#footer').show();
         currPage++;          
@@ -110,9 +110,10 @@ $(document).ready(function() {
     $("body").on("click", ".pictureDiv", function(event) {
         event.preventDefault();
         var imgUrl = $(this).find(">:first-child").attr("href");
-        var htmlOut = "<a href='static/img/{0}'><img class='menu' src='static/resources/expand.png'></a><br>".format(imgUrl);
-        htmlOut    += "<a href='edit/{0}'><img class='menu' src='static/resources/edit.png'></a>".format(imgUrl);
-        htmlOut    += "<img id='main' src='static/img/{0}'>".format(imgUrl);
+        var imgID  = $(this).find(">:first-child").attr("id");
+        var htmlOut = "<a href='static/{0}'><img class='menu' src='static/resources/expand.png'></a><br>".format(imgUrl);
+        htmlOut    += "<a href='edit/{0}'><img class='menu' src='static/resources/edit.png'></a>".format(imgID);
+        htmlOut    += "<img id='main' src='static/{0}'>".format(imgUrl);
         $("#imgHover").html(htmlOut);
         $("#imgHover").fadeIn(300);
     });

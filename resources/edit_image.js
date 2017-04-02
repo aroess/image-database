@@ -1,60 +1,74 @@
 var imgResize = function () {
-    var w = $("#imageEdit").attr("width"),
-        h = $("#imageEdit").attr("height"),
+    var w = $("IMG[name=imageEdit]").attr("width"),
+        h = $("IMG[name=imageEdit]").attr("height"),
         w_max = $(window).width() - 100,
         h_max = $(window).height() - 150;
 
     // width too large?
     if (w > w_max) {
-        $("#imageEdit").attr("width", w_max);
-        $("#imageEdit").attr("height", Math.floor(h * (w_max / w)));
-        w = $("#imageEdit").attr("width");
-        h = $("#imageEdit").attr("height");
+        $("IMG[name=imageEdit]").attr("width", w_max);
+        $("IMG[name=imageEdit]").attr("height", Math.floor(h * (w_max / w)));
+        w = $("IMG[name=imageEdit]").attr("width");
+        h = $("IMG[name=imageEdit]").attr("height");
     }
 
     // height too large?
     if (h > h_max) {
-        $("#imageEdit").attr("height", h_max);
-        $("#imageEdit").attr("width", Math.floor(w * (h_max / h)));
+        $("IMG[name=imageEdit]").attr("height", h_max);
+        $("IMG[name=imageEdit]").attr("width", Math.floor(w * (h_max / h)));
     }
 };
 
 
 var addKey = function () {
-    var filename = $("#imageEdit").attr("src").split("/");
-    filename = filename[filename.length-1];
+    var fileID = $("IMG[name=imageEdit]").attr("id"); 
     var keyword = $("input[name=keyword]").val();
     if (confirm("Add keyword '" + keyword + "' to image?")) {
     $.post('/addtagtoimage',
-    {
-        "filename" : filename,
-        "keywords" : keyword
-    },
-    function(data) {
-        if(data["msg"]) alert(data["msg"]);
-        else window.location.reload();
-    },
-    'json'
-    );
+           {
+               "fileID" : fileID,
+               "keywords" : keyword
+           },
+           function(data) {
+               if(data["msg"]) alert(data["msg"]);
+               else window.location.reload();
+           },
+           'json'
+          );
     }
 };
 
+var deleteTag = function (filename) {
+    if (confirm("Remove tag '" + filename + "' from image?")) {
+        var fileID = $("IMG[name=imageEdit]").attr("id");
+        $.post('/deletetagfromimage',
+               {
+                   "fileID" : fileID,
+                   "tag"    : filename
+               },
+               function(data) {
+                   window.location.reload();
+               },
+               'json'
+              );
+    }
+}
+
 var deleteImage = function () {
-    var filename = $("#imageEdit").attr("src").split("/");
-    filename = filename[filename.length-1];
+    var fileID = $("IMG[name=imageEdit]").attr("id");
     if (confirm("Are you sure? This action will delete the database\nentry AND the file on the disk.")) {
     $.post('/deleteimage',
-    {
-        "filename" : filename,
-    },
-    function(data) {
-        if(data["msg"]) {
-            alert(data["msg"]);
-            if (data["msg"] == "Image successfully deleted!") window.location = "/";
-        }
-    },
-    'json'
-    );
+           {
+               "fileID" : fileID,
+           },
+           function(data) {
+               if(data["msg"]) {
+                   alert(data["msg"]);
+                   if (data["msg"] == "Image successfully deleted!") window.location = "/";
+               }
+           },
+           'json'
+          );
     }
 };
 
@@ -77,22 +91,8 @@ $(document).ready(function() {
         });
     },'json');
 
-
     // "delete tag"-button handler
     $("#tagbuttons input").click(function() {
-    if (confirm("Remove tag '" + this.name + "' from image?")) {
-        var filename = $("#imageEdit").attr("src").split("/");
-        filename = filename[filename.length-1];
-        $.post('/deletetagfromimage',
-        {
-            "filename" : filename,
-            "tag" :      this.name
-        },
-        function(data) {
-            window.location.reload();
-        },
-        'json'
-        );
-    }
+        deleteTag(this.name);
     });
 });

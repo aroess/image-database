@@ -25,41 +25,48 @@ def writeTagList():
         f.write(json.dumps(allTags))
 
 
-def getTagsforFilename(filename):
+def getTagsforID(fileID):
     with closing(connection.cursor()) as c:
         sqlString = """
             SELECT tag
             FROM file2tag
             JOIN files ON files.rowid = file2tag.file_id
             JOIN tags ON tags.rowid = file2tag.tag_id
-            WHERE filename = ?
+            WHERE files.rowid = ?
         """
 
         assignedTags = []
-        for entry in c.execute(sqlString, (filename,)):
+        for entry in c.execute(sqlString, (fileID,)):
             assignedTags.append(" ".join(entry).encode('utf-8'))
         assignedTags.sort()
 
     return assignedTags
 
 
-def getDimensionsForFilename(filename):
+def getDimensionsForID(fileID):
     with closing(connection.cursor()) as c:
         sqlString = """SELECT width, height FROM files 
-        WHERE filename=?"""
+        WHERE rowid = ?"""
 
-        c.execute(sqlString, (filename,))
+        c.execute(sqlString, (fileID,))
         width, height = c.fetchone()
 
     return  width, height
-    
+
+def getFilepathForID(fileID):
+    with closing(connection.cursor()) as c:
+        sqlString = """SELECT filepath FROM files 
+        WHERE rowid = ?"""
+
+        c.execute(sqlString, (fileID,))
+        return c.fetchone()[0]
 
 def isValid(toCheck, param):
     with closing(connection.cursor()) as c:
         if toCheck == "tag":
             c.execute("SELECT tag FROM tags WHERE tag = ?", (param,))
-        elif toCheck == "filename":
-            c.execute("SELECT filename FROM files WHERE filename = ?", (param,))
+        elif toCheck == "fileID":
+            c.execute("SELECT rowid FROM files WHERE rowid = ?", (param,))
         else:
             raise NameError
 
@@ -96,13 +103,15 @@ def addkeys():
         allTags = allTags)
 
 
-@route('/edit/<filename>')
-def editTags(filename):
-    assignedTags = getTagsforFilename(filename)
-    width, height = getDimensionsForFilename(filename)
-
+@route('/edit/<fileID>')
+def editTags(fileID):
+    assignedTags  = getTagsforID(fileID)
+    width, height = getDimensionsForID(fileID)
+    filepath      = getFilepathForID(fileID)
+    
     return template('edit_image.tpl',
-        filename = filename,
+        filename = filepath,
+        fileID = fileID,
         assignedTags = assignedTags,
         width = width,
         height = height)
@@ -111,15 +120,18 @@ def editTags(filename):
 @route('/untagged')
 def getUntagged():
     with closing(connection.cursor()) as c:
-        sqlString = """SELECT filename  FROM files
+        sqlString = """SELECT filepath, rowid  FROM files
         WHERE rowid NOT IN (SELECT file_id FROM file2tag)"""
 
         untaggedFiles = []
         for entry in c.execute(sqlString):
-            untaggedFiles.append(" ".join(entry).encode('utf-8'))
+            untaggedFiles.append(
+                ["".join(entry[0]).encode('utf-8'),
+                     entry[1]])
 
     return template('untagged.tpl',
-        untaggedFiles = untaggedFiles)
+        untaggedFiles = untaggedFiles
+    )
 
 
 @route('/tagcount')
@@ -146,7 +158,7 @@ def refresh():
 
 @route('/static/<filepath:path>')
 def serveStatic(filepath):
-    return static_file(filepath, root='')
+    return static_file(filepath, root='.')
 
 '''
 END TEMPLATES
@@ -174,18 +186,18 @@ def searchFiles():
         tagString = tagString[:-3] # delete last OR
 
         sqlString = """
-        SELECT filename, COUNT(filename) as count
+        SELECT filepath, thumbpath, files.rowid, COUNT(filepath) as count
         FROM file2tag
         JOIN files ON files.rowid = file2tag.file_id
         JOIN tags ON tags.rowid = file2tag.tag_id
         WHERE {0}
-        GROUP BY filename
+        GROUP BY filepath
         HAVING count = {1}
         LIMIT {2}, {3}
         """.format(tagString, len(tags), lower, OFFSET)
     else:
         sqlString = """
-        SELECT filename FROM files ORDER BY RANDOM()
+        SELECT filepath, thumbpath, rowid FROM files ORDER BY RANDOM()
         LIMIT {0}, {1}
         """.format(0, OFFSET) 
 
@@ -194,7 +206,7 @@ def searchFiles():
     with closing(connection.cursor()) as c:
         resultList = []
         for entry in c.execute(sqlString, tags):
-            resultList.append(entry[0])
+            resultList.append(entry)
 
     return {"result": resultList}
 
@@ -248,12 +260,11 @@ def deleteTagFromDB():
 
 @route('/addtagtoimage', method='POST')
 def addTagstoImage():
-    filename = request.POST['filename']
+    fileID = request.POST['fileID']
     tag = request.POST['keywords']
-    assignedTags = getTagsforFilename(filename)
+    assignedTags = getTagsforID(fileID)
 
- 
-    if not isValid("filename", filename): return
+    if not isValid("fileID", fileID): return
 
     if not isValid("tag", tag): 
         return {"msg": "Failed. '{0}' is not a valid tag!".format(tag)}
@@ -264,11 +275,11 @@ def addTagstoImage():
     with closing(connection.cursor()) as c:
         sqlString = """
         INSERT INTO file2tag(file_id, tag_id) VALUES(
-            (SELECT rowid FROM files WHERE filename = ?),
+            ?,
             (SELECT rowid FROM tags WHERE tag = ?)
         )
         """
-        c.execute(sqlString,(filename, tag))
+        c.execute(sqlString,(fileID, tag))
         connection.commit()
 
     return {} # return object or callback in $.post will not fire
@@ -276,16 +287,16 @@ def addTagstoImage():
 
 @route('/deletetagfromimage', method='POST')
 def deleteTagFromImage():
-    filename = request.POST['filename']
-    tag = request.POST['tag']
+    fileID = request.POST['fileID']
+    tag    = request.POST['tag']
 
     with closing(connection.cursor()) as c:
         sqlString = """
             DELETE FROM file2tag WHERE
             tag_id = (SELECT rowid FROM tags WHERE tag = ?) AND
-            file_id = (SELECT rowid FROM files WHERE filename = ?)
+            file_id = ?
             """
-        c.execute(sqlString,(tag, filename))
+        c.execute(sqlString,(tag, fileID))
         connection.commit()
 
     return {}
@@ -297,23 +308,24 @@ def refreshfolder():
 
 @route('/deleteimage', method='POST')
 def deleteimage():
-    filename = request.POST['filename']
+    fileID = request.POST['fileID']
     with closing(connection.cursor()) as c:
         sqlString = """
-            SELECT COUNT(rowid) FROM file2tag WHERE file_id = 
-            (SELECT rowid FROM files WHERE filename=?)
+            SELECT COUNT(rowid) FROM file2tag WHERE file_id = ?
             """
+        count = c.execute(sqlString,(fileID,)).fetchone()[0]
 
-        count = c.execute(sqlString,(filename,))
-        count = c.fetchone()[0]
+        sqlString = """
+            SELECT filepath, thumbpath from files WHERE rowid = ?
+            """
+        filepath, thumbpath = c.execute(sqlString,(fileID,)).fetchone()
 
         if count == 0:
-            sqlString = """DELETE FROM files WHERE filename=?"""
-            c.execute(sqlString, (filename,))
+            sqlString = """DELETE FROM files WHERE rowid = ?"""
+            c.execute(sqlString, (fileID,))
             connection.commit()
-            os.remove(os.path.join("img", filename))
-            filename = os.path.splitext(filename)[0]
-            os.remove(os.path.join("img", "thumbs", filename + ".jpg"))
+            os.remove(os.path.join(filepath))
+            os.remove(os.path.join("thumbs", thumbpath))
         else:
             return {"msg":  "Failed. There are still {0} ".format(count) +
                     "keyword(s) attached to this image."}
